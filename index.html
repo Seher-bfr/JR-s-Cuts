@@ -15,7 +15,7 @@
         --bg:#ffffff; --panel:#f0f0f0; --text:#000000; --muted:#666666; --accent:#32cd32; --watermark:rgba(0,0,0,0.12);
         }
 
-        html,body{height:100%;}
+        html,body{height:100%;overflow-x:hidden;}
         body{
             margin:0; font-family:Montserrat,system-ui,-apple-system,"Segoe UI",Roboto; background:var(--bg); color:var(--text);
             -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
@@ -104,6 +104,69 @@
         @keyframes rip{to{transform:translate(-50%,-50%) scale(6);opacity:0}}
 
         .click-anim{transition:transform .18s cubic-bezier(.2,.9,.3,1);transform-origin:center}
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content {
+            background: var(--panel);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .modal-content h3 {
+            margin: 0 0 12px 0;
+            color: var(--accent);
+            font-family: Merriweather, serif;
+        }
+
+        .modal-content p {
+            margin: 0 0 20px 0;
+            color: var(--text);
+        }
+
+        .modal-close {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .modal-close:hover {
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
         
         /* Time slots styling */
         .time-slot {
@@ -130,10 +193,13 @@
             }
         }
         
-        @media (max-width:700px){ 
+        .input-row{display:flex;gap:8px}
+
+        @media (max-width:700px){
             .hero{flex-direction:column;align-items:flex-start}
-            .pole{width:100%;height:120px} 
+            .pole{width:100%;height:120px}
             .pole .strip{height:240px}
+            .input-row{flex-direction:column}
             #timeSlotsGrid {
                 grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
                 gap: 6px;
@@ -222,7 +288,7 @@
             <h2>Rezervare</h2>
             <div class="card" style="padding:16px">
                 <form id="bookForm">
-                    <div style="display:flex;gap:8px">
+                    <div class="input-row">
                         <input name="nume" placeholder="Nume" required>
                         <input name="telefon" placeholder="Telefon (07xxxxxxxx)" maxlength="10" pattern="07[0-9]{8}" title="Numarul de telefon trebuie sa inceapa cu 07 si sa aiba 10 cifre" required>
                     </div>
@@ -233,17 +299,15 @@
                         <option>Modelare Barba 30 RON</option>
                         <option>Pachet masculin 80 RON</option>
                     </select>
-                    <div style="display:flex;gap:8px; position:relative;">
+                    <div class="input-row" style="position:relative;">
                         <input type="date" name="data" required id="dateInput" style="flex:1;">
-                        <input type="text" name="time" required id="timeInput" placeholder="16:00" style="flex:1;" pattern="[0-2][0-9]:[0-5][0-9]" title="24-hour format (HH:MM)">
                     </div>
-                    
-                    <!-- Calendar and Time Slots Section -->
+                    <input type="hidden" name="time" id="timeInput">
+
                     <div id="calendarSection" style="display:none; margin-top: 12px;">
                         <div class="calendar-container" style="background: var(--panel); border-radius: 8px; padding: 16px; border: 1px solid rgba(255,255,255,0.1);">
                             <h4 style="margin: 0 0 12px 0; text-align: center;">Selectați ora disponibilă</h4>
                             <div id="timeSlotsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px;">
-                                <!-- Time slots will be populated here -->
                             </div>
                         </div>
                     </div>
@@ -260,6 +324,14 @@
     <footer>
         © <span id="year"></span> drgx.prod
     </footer>
+
+    <div id="successModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Rezervare trimisă!</h3>
+            <p>Te sunăm noi pentru confirmare. Mulțumim!</p>
+            <button class="modal-close" onclick="closeModal()">Închide</button>
+        </div>
+    </div>
 
     <script>
         const html = document.documentElement;
@@ -280,28 +352,26 @@
             setTimeout(()=>el.remove(),700);
         }, {passive:true});
 
-        document.getElementById('bookBtn').addEventListener('click', ()=>document.getElementById('booking').scrollIntoView({behavior:'smooth'}));
+        document.getElementById('primaryBook').addEventListener('click', ()=>document.getElementById('booking').scrollIntoView({behavior:'smooth'}));
         document.getElementById('primaryBook').addEventListener('click', ()=>document.getElementById('booking').scrollIntoView({behavior:'smooth'}));
         document.getElementById('viewAppointments').addEventListener('click', ()=>document.getElementById('appointments').scrollIntoView({behavior:'smooth'}));
 
-        // Business hours configuration
         const businessHours = {
-            1: { start: '20:00', end: '24:00' }, // Monday: 20:00 - 00:00
-            2: { start: '20:00', end: '24:00' }, // Tuesday: 20:00 - 00:00  
-            3: { start: '20:00', end: '24:00' }, // Wednesday: 20:00 - 00:00
-            4: { start: '20:00', end: '24:00' }, // Thursday: 20:00 - 00:00
-            5: { start: '20:00', end: '24:00' }, // Friday: 20:00 - 00:00
-            6: { start: '16:00', end: '20:00' }, // Saturday: 16:00 - 20:00
-            0: null      // Sunday: Closed
+            1: { start: '20:00', end: '24:00' },
+            2: { start: '20:00', end: '24:00' },
+            3: { start: '20:00', end: '24:00' },
+            4: { start: '20:00', end: '24:00' },
+            5: { start: '20:00', end: '24:00' },
+            6: { start: '16:00', end: '20:00' },
+            0: null
         };
 
-        // Validate time against business hours
         function isValidTime(date, time) {
             const dayOfWeek = new Date(date).getDay();
             const hours = businessHours[dayOfWeek];
-            
-            if (!hours) return false; // Sunday or closed day
-            
+
+            if (!hours) return false;
+
             if (!time || !time.includes(':')) return false;
             
             const [selectedHour] = time.split(':').map(Number);
@@ -311,7 +381,6 @@
             return selectedHour >= startHour && selectedHour < endHour;
         }
 
-        // Validate date - ensure it's not in the past (today or future only)
         function isValidDate(dateString) {
             const selectedDate = new Date(dateString);
             const today = new Date();
@@ -319,50 +388,37 @@
             // Set both dates to start of day (midnight) for accurate comparison
             today.setHours(0, 0, 0, 0);
             selectedDate.setHours(0, 0, 0, 0);
-            
-            console.log('Today:', today.toISOString().split('T')[0]); // Debug
-            console.log('Selected:', selectedDate.toISOString().split('T')[0]); // Debug
-            
+
             return selectedDate >= today;
         }
 
-        // Update time input based on selected date
         function updateTimeRestrictions() {
             const dateInput = document.getElementById('dateInput');
             const timeInput = document.getElementById('timeInput');
             const calendarSection = document.getElementById('calendarSection');
-            
+
             if (dateInput && timeInput) {
                 const selectedDate = new Date(dateInput.value);
                 const dayOfWeek = selectedDate.getDay();
                 const hours = businessHours[dayOfWeek];
-                
+
                 if (hours) {
-                    timeInput.disabled = false;
-                    timeInput.min = hours.start;
-                    timeInput.max = hours.end;
-                    timeInput.placeholder = `Ora: ${hours.start} - ${hours.end}`;
                     calendarSection.style.display = 'block';
                     generateTimeSlots(selectedDate, hours);
                 } else {
-                    timeInput.disabled = true;
                     timeInput.value = '';
-                    timeInput.placeholder = 'Închis';
                     calendarSection.style.display = 'none';
                 }
             }
         }
 
-        // Generate available time slots
         function generateTimeSlots(date, hours) {
             const timeSlotsGrid = document.getElementById('timeSlotsGrid');
             const [startHour] = hours.start.split(':').map(Number);
             const [endHour] = hours.end.split(':').map(Number);
-            
-            // Clear existing slots
+
             timeSlotsGrid.innerHTML = '';
-            
-            // Generate hourly slots
+
             for (let hour = startHour; hour < endHour; hour++) {
                 const timeString = hour.toString().padStart(2, '0') + ':00';
                 const slotButton = document.createElement('button');
@@ -380,8 +436,7 @@
                     transition: all 0.2s ease;
                     font-size: 0.9rem;
                 `;
-                
-                // Add hover effect
+
                 slotButton.addEventListener('mouseenter', function() {
                     this.style.background = 'var(--accent)';
                     this.style.color = 'white';
@@ -395,38 +450,32 @@
                         this.style.transform = 'translateY(0)';
                     }
                 });
-                
-                // Check if slot is "booked" (simulate some booked slots)
-                const isBooked = Math.random() < 0.3; // 30% chance of being booked
-                
+
+                const isBooked = Math.random() < 0.3;
+
                 if (isBooked) {
                     slotButton.style.opacity = '0.5';
                     slotButton.style.cursor = 'not-allowed';
                     slotButton.title = 'Deja rezervat';
                     slotButton.disabled = true;
                 } else {
-                    // Add click handler
                     slotButton.addEventListener('click', function() {
-                        // Remove previous selection
                         document.querySelectorAll('.time-slot.selected').forEach(slot => {
                             slot.classList.remove('selected');
                             slot.style.background = 'var(--panel)';
                             slot.style.color = 'var(--text)';
                             slot.style.transform = 'translateY(0)';
                         });
-                        
-                        // Select this slot
+
                         this.classList.add('selected');
                         this.style.background = 'var(--accent)';
                         this.style.color = 'white';
                         this.style.transform = 'translateY(-1px)';
-                        
-                        // Update time input
+
                         const timeInput = document.getElementById('timeInput');
                         timeInput.value = timeString;
-                        timeInput.focus(); // Focus the input
-                        
-                        // Hide calendar after selection
+                        timeInput.focus();
+
                         setTimeout(() => {
                             document.getElementById('calendarSection').style.display = 'none';
                         }, 300);
@@ -437,40 +486,23 @@
             }
         }
 
-        // Toggle calendar with time input focus
-        function setupTimeInputToggle() {
-            const timeInput = document.getElementById('timeInput');
-            if (timeInput) {
-                timeInput.addEventListener('focus', function() {
-                    const dateInput = document.getElementById('dateInput');
-                    if (dateInput.value) {
-                        updateTimeRestrictions();
-                    }
-                });
-            }
-        }
 
-        // Phone number validation
         const phoneInput = document.querySelector('input[name="telefon"]');
         if (phoneInput) {
             phoneInput.addEventListener('input', function(e) {
                 let value = e.target.value;
-                
-                // Remove any non-numeric characters
+
                 value = value.replace(/[^0-9]/g, '');
-                
-                // Limit to 10 characters
+
                 if (value.length > 10) {
                     value = value.substring(0, 10);
                 }
-                
-                // Update the input value
+
                 e.target.value = value;
-                
-                // Validate the phone number
+
                 const phonePattern = /^07[0-9]{8}$/;
                 if (value.length === 10 && !phonePattern.test(value)) {
-                    e.target.setCustomValidity('Numaru tau orfane');
+                    e.target.setCustomValidity('Număr de telefon invalid. Trebuie să înceapă cu 07.');
                 } else {
                     e.target.setCustomValidity('');
                 }
@@ -487,61 +519,47 @@
             });
         }
 
-        // Handle form submission
         const bookForm = document.getElementById('bookForm');
-        console.log('Found form:', bookForm);
-        
+
         if (bookForm) {
             bookForm.addEventListener('submit', (e)=>{
                 e.preventDefault();
-                console.log('Form submitted!'); // Debug log
-                
+
                 const fd = new FormData(e.target);
-                
-                // Get form data
+
                 const name = fd.get('nume') || '';
                 const phone = fd.get('telefon') || '';
                 const date = fd.get('data') || '';
                 const time = fd.get('time') || '';
                 const service = fd.get('serviciu') || '';
                 const notes = fd.get('note') || '';
-                
-                console.log('Form data:', {name, phone, date, time, service}); // Debug log
-                
+
                 // Validate phone number
                 const phonePattern = /^07[0-9]{8}$/;
                 if (!phonePattern.test(phone)) {
-                    console.log('Invalid phone number'); // Debug log
-                    alert('Numaru tau orfane');
+                    alert('Număr de telefon invalid. Trebuie să înceapă cu 07 și să aibă 10 cifre.');
                     return;
                 }
-                
-                // Extract service name before the price
+
                 let cleanService = '';
                 if (service) {
                     cleanService = service.split(' ').slice(0, -2).join(' ');
                 }
-                
-                // Validate date is not in the past
                 if (!isValidDate(date)) {
                     alert('Vă rugăm selectați o dată de astăzi sau o dată din viitor.');
                     return;
                 }
-                
-                // Check if time was selected
+
                 if (!time) {
                     alert('Vă rugăm selectați o oră disponibilă.');
                     return;
                 }
-                
-                // Validate time format
+
                 const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
                 if (!timeRegex.test(time)) {
                     alert('Format oră invalid. Vă rugăm introduceți ora în format HH:MM.');
                     return;
                 }
-                
-                // Validate business hours - strict validation to prevent submission
                 const selectedDate = new Date(date);
                 const dayOfWeek = selectedDate.getDay();
                 const dayHours = businessHours[dayOfWeek];
@@ -555,19 +573,15 @@
                     alert(`Ora selectată nu este în intervalul de program.\nZiua: ${['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'][dayOfWeek]}\nProgram: ${dayHours.start} - ${dayHours.end}\n\nVă rugăm selectați o oră în intervalul de program.`);
                     return;
                 }
-                
-                // Show simple popup alert
-                alert('Te sunam noi!');
-                console.log('Alert shown: Te sunam noi!'); // Debug log
-                
-                // Reset form
+
+                showSuccessModal();
+
                 e.target.reset();
                 updateTimeRestrictions();
             });
             
 
             
-            // Add date change listener
             const dateInput = document.getElementById('dateInput');
             if (dateInput) {
                 dateInput.addEventListener('change', updateTimeRestrictions);
@@ -576,172 +590,59 @@
 
         document.getElementById('year').textContent = new Date().getFullYear();
 
-        // Set up basic date and time inputs
-        console.log('Setting up basic inputs...');
         const dateInput = document.getElementById('dateInput');
         const timeInput = document.getElementById('timeInput');
         
-        console.log('Found inputs:', {dateInput, timeInput});
-        
         if (dateInput && timeInput) {
-            // Set minimum date to today - STRICT validation
             const now = new Date();
             const today = now.toISOString().split('T')[0]; // Get YYYY-MM-DD format
             dateInput.min = today;
             dateInput.value = today; // Set default to today
-            console.log('Set min date to:', today);
-            
-            // Validate date selection and provide immediate feedback - STRICT validation
+
             dateInput.addEventListener('change', function() {
                 const selectedDate = this.value;
                 const today = new Date().toISOString().split('T')[0];
-                
-                console.log('Date changed to:', selectedDate); // Debug
-                
+
                 if (!selectedDate) return; // Skip if no date selected
-                
-                // Strict validation - only today or future dates allowed
+
                 if (selectedDate < today) {
                     alert('Nu puteți selecta date din trecut! Vă rugăm selectați astăzi sau o dată din viitor.');
                     this.value = today; // Reset to today immediately
-                    console.log('Date rejected - too early'); // Debug
                     updateTimeRestrictions(); // Reset time restrictions
                     return;
                 }
-                
+
                 if (selectedDate && isValidDate(selectedDate)) {
-                    console.log('Date accepted'); // Debug
                     updateTimeRestrictions(); // Update time restrictions for new date
                 } else {
-                    console.log('Date invalid'); // Debug
                     alert('Dată invalidă! Vă rugăm selectați o dată validă.');
                     this.value = today; // Reset to today
                     updateTimeRestrictions(); // Reset time restrictions
                 }
             });
-            
-            // Force 24-hour time format and remove AM/PM functionality
-            timeInput.setAttribute('data-format', '24-hour');
-            timeInput.setAttribute('maxlength', '5'); // Limit to HH:MM format
-            
-            // Format and validate time input as user types
-            timeInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/[^\d:]/g, ''); // Only allow digits and colons
-                
-                // Auto-format with colon
-                if (value.length === 2 && !value.includes(':')) {
-                    value = value + ':';
-                }
-                
-                // Limit to max length
-                if (value.length > 5) {
-                    value = value.substring(0, 5);
-                }
-                
-                e.target.value = value;
-            });
-            
-            // Validate time format on blur
-            timeInput.addEventListener('blur', function() {
-                const timeValue = this.value.trim();
-                
-                if (timeValue) {
-                    // Validate HH:MM format
-                    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-                    if (!timeRegex.test(timeValue)) {
-                        alert('Vă rugăm introduceți ora în format 24h (HH:MM), de exemplu: 16:00');
-                        this.value = '';
-                        this.focus();
-                        return;
-                    }
-                    
-                    // Ensure it's always 24-hour format
-                    this.value = timeValue;
-                }
-            });
-            
-            // Set initial time restrictions
+
+
             updateTimeRestrictions();
-            
-            // Setup time input toggle
-            setupTimeInputToggle();
         }
+
+        function showSuccessModal() {
+            const modal = document.getElementById('successModal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                closeModal();
+            }, 5000);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('successModal');
+            modal.style.display = 'none';
+        }
+
+        document.getElementById('successModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
     </script>
-<!-- Code injected by live-server -->
-<script>
-	// <![CDATA[  <-- For SVG support
-	if ('WebSocket' in window) {
-		(function () {
-			function refreshCSS() {
-				var sheets = [].slice.call(document.getElementsByTagName("link"));
-				var head = document.getElementsByTagName("head")[0];
-				for (var i = 0; i < sheets.length; ++i) {
-					var elem = sheets[i];
-					var parent = elem.parentElement || head;
-					parent.removeChild(elem);
-					var rel = elem.rel;
-					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-					}
-					parent.appendChild(elem);
-				}
-			}
-			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-			var address = protocol + window.location.host + window.location.pathname + '/ws';
-			var socket = new WebSocket(address);
-			socket.onmessage = function (msg) {
-				if (msg.data == 'reload') window.location.reload();
-				else if (msg.data == 'refreshcss') refreshCSS();
-			};
-			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-				console.log('Live reload enabled.');
-				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-			}
-		})();
-	}
-	else {
-		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-	}
-	// ]]>
-</script>
-<!-- Code injected by live-server -->
-<script>
-	// <![CDATA[  <-- For SVG support
-	if ('WebSocket' in window) {
-		(function () {
-			function refreshCSS() {
-				var sheets = [].slice.call(document.getElementsByTagName("link"));
-				var head = document.getElementsByTagName("head")[0];
-				for (var i = 0; i < sheets.length; ++i) {
-					var elem = sheets[i];
-					var parent = elem.parentElement || head;
-					parent.removeChild(elem);
-					var rel = elem.rel;
-					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-					}
-					parent.appendChild(elem);
-				}
-			}
-			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-			var address = protocol + window.location.host + window.location.pathname + '/ws';
-			var socket = new WebSocket(address);
-			socket.onmessage = function (msg) {
-				if (msg.data == 'reload') window.location.reload();
-				else if (msg.data == 'refreshcss') refreshCSS();
-			};
-			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-				console.log('Live reload enabled.');
-				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-			}
-		})();
-	}
-	else {
-		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-	}
-	// ]]>
-</script>
 </body>
 </html>
