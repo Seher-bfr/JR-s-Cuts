@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>JR's pl</title>
+    <title>JR's Cuts</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Merriweather:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
 
@@ -451,32 +451,23 @@
                     }
                 });
 
-                const isBooked = Math.random() < 0.3;
-
-                if (isBooked) {
-                    slotButton.style.opacity = '0.5';
-                    slotButton.style.cursor = 'not-allowed';
-                    slotButton.title = 'Deja rezervat';
-                    slotButton.disabled = true;
-                } else {
-                    slotButton.addEventListener('click', function() {
-                        document.querySelectorAll('.time-slot.selected').forEach(slot => {
-                            slot.classList.remove('selected');
-                            slot.style.background = 'var(--panel)';
-                            slot.style.color = 'var(--text)';
-                            slot.style.transform = 'translateY(0)';
-                        });
-
-                        this.classList.add('selected');
-                        this.style.background = 'var(--accent)';
-                        this.style.color = 'white';
-                        this.style.transform = 'translateY(-1px)';
-
-                        const timeInput = document.getElementById('timeInput');
-                        timeInput.value = timeString;
-                        timeInput.focus();
+                slotButton.addEventListener('click', function() {
+                    document.querySelectorAll('.time-slot.selected').forEach(slot => {
+                        slot.classList.remove('selected');
+                        slot.style.background = 'var(--panel)';
+                        slot.style.color = 'var(--text)';
+                        slot.style.transform = 'translateY(0)';
                     });
-                }
+
+                    this.classList.add('selected');
+                    this.style.background = 'var(--accent)';
+                    this.style.color = 'white';
+                    this.style.transform = 'translateY(-1px)';
+
+                    const timeInput = document.getElementById('timeInput');
+                    timeInput.value = timeString;
+                    timeInput.focus();
+                });
                 
                 timeSlotsGrid.appendChild(slotButton);
             }
@@ -642,4 +633,3 @@
     </script>
 </body>
 </html>
-
