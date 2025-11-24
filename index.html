@@ -201,13 +201,15 @@
             .pole .strip{height:240px}
             .input-row{flex-direction:column}
             #timeSlotsGrid {
-                grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-                gap: 6px;
+                display: flex;
+                flex-wrap: wrap;
                 justify-content: center;
+                gap: 6px;
             }
             .time-slot {
-                padding: 6px 4px;
-                font-size: 0.8rem;
+                padding: 10px 8px;
+                font-size: 1rem;
+                min-width: 80px;
             }
         }
     </style>
